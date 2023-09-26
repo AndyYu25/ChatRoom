@@ -5,7 +5,7 @@ import datetime
 import threading
 
 def serverPrint(inStr: str):
-    print(inStr, end = '', flush = False)
+    print(inStr, end = '', flush = True)
 
 def serverThread(clientSocket: socket, closeEvent: threading.Event):
     """
@@ -60,7 +60,11 @@ def getDatetimeString():
     else:
         hourStr = str(hour)
     minute = currentDatetime.minute
-    return f"It's {hourStr}:{minute} on {weekday}, {dayStr} {monthStr}, {year}\n"
+    if minute < 10:
+        minuteStr = "0" + str(minute)
+    else:
+        minuteStr = str(minute)
+    return f"It's {hourStr}:{minuteStr} on {weekday}, {dayStr} {monthStr}, {year}.\n"
 def main():
     args = sys.argv
     HOST = args[1]
@@ -83,7 +87,7 @@ def main():
     while True:
         cmdStr = input("")
         if cmdStr == ":Exit":
-            clientSocket.send((cmdStr + "\n").encode())
+            clientSocket.send((cmdStr).encode())
             #wait for server response and for child thread to end
             time.sleep(1)
             closeEvent.set()
