@@ -9,20 +9,16 @@ def clientThread(connectionSocket: socket, addr: str,
     """
     #check passcode
     passwordAttempt = connectionSocket.recv(1024).decode().strip()
-    print("Passed", flush = True)
-    print(passwordAttempt, flush = True)
     if passwordAttempt != password:
         #wrong password
         connectionSocket.close()
         return
-    print("Passed", flush = True)
     name = connectionSocket.recv(1024).decode().strip()
     if name in nameSet or " " in name:
         #name already exists or name has space  
         connectionSocket.close()
         return
-    print("Passed", flush = True)
-    connectionSocket.send("Welcome!\n".encode())
+    connectionSocket.send("Welcome!".encode())
     nameSet.add(name)
     joinAnnouncement = f"{name} joined the chatroom"
     #announce to all other clients that a new person has joined the chatroom
