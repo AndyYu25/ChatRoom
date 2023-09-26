@@ -8,7 +8,7 @@ import threading
 def serverPrint(inStr: str):
     print(inStr, end = '', flush = True)
 
-def serverThread(clientSocket: socket, closeEvent: threading.Event):
+def serverThread(clientSocket: socket, clientDisconnect: threading.Event, serverDisconnect: threading.Event):
     """
     Function to monitor incoming server messages separately from monitoring stdin
     """
@@ -16,12 +16,40 @@ def serverThread(clientSocket: socket, closeEvent: threading.Event):
     while True:
         try:
             inMessage = clientSocket.recv(1024).decode()
+            if inMessage == b'' or not inMessage:
+                os._exit(1)
+                #server sending only empty messages
+                serverDisconnect.set()
+                return
             serverPrint(inMessage)
         except:
-            if closeEvent:
+            #exceptions only occur if the connection socket has been closed
+            if clientDisconnect.is_set():
                 return
             else:
-                os._exit(1)
+                serverDisconnect.set()
+                return
+
+def inputThread(clientSocket: socket, clientDisconnect: threading.Event):
+    """
+    Thread that monitors user input
+    """
+    while True:
+        cmdStr = input("")
+        if cmdStr == ":Exit":
+            clientDisconnect.set()
+            clientSocket.shutdown(SHUT_RDWR)
+            clientSocket.close()
+            return
+        elif cmdStr == ":)":
+            clientSocket.send("[feeling happy]\n".encode())
+        elif cmdStr == ":(":
+            clientSocket.send("[feeling sad]\n".encode())
+        elif cmdStr == ":mytime":
+            clientSocket.send(getDatetimeString().encode())
+        else:
+            clientSocket.send((cmdStr + "\n").encode())
+
 
 def getDatetimeString():
     currentDatetime = datetime.datetime.now().replace(second = 0, microsecond=0)
@@ -68,6 +96,7 @@ def getDatetimeString():
     else:
         minuteStr = str(minute)
     return f"It's {hourStr}:{minuteStr} on {weekday}, {dayStr} {monthStr}, {year}.\n"
+
 def main():
     args = sys.argv
     HOST = args[1]
@@ -82,26 +111,23 @@ def main():
     clientSocket.send(f"{name}\n".encode())
     welcomeMessage = clientSocket.recv(1024)
     serverPrint(welcomeMessage.decode())
-    closeEvent = threading.Event()
+    clientDisconnect = threading.Event()
+    serverDisconnect = threading.Event()
     serverMonitor = threading.Thread(target=serverThread, 
-                                            args = (clientSocket,closeEvent))
+                                     args = (clientSocket,clientDisconnect,serverDisconnect))
+
+    inputMonitor = threading.Thread(target=inputThread,
+                                    args = (clientSocket,clientDisconnect))
     serverMonitor.daemon = True
+    inputMonitor.daemon = True
     serverMonitor.start()
+    inputMonitor.start()
     while True:
-        cmdStr = input("")
-        if cmdStr == ":Exit":
-            closeEvent.set()
-            clientSocket.shutdown(SHUT_RDWR)
-            clientSocket.close()
+        #main thread monitors secondary threads and exits when it detects a flag has been set
+        if serverDisconnect.is_set():
+            sys.exit(1)
+        elif clientDisconnect.is_set():
             sys.exit(0)
-        elif cmdStr == ":)":
-            clientSocket.send("[feeling happy]\n".encode())
-        elif cmdStr == ":(":
-            clientSocket.send("[feeling sad]\n".encode())
-        elif cmdStr == ":mytime":
-            clientSocket.send(getDatetimeString().encode())
-        else:
-            clientSocket.send((cmdStr + "\n").encode())
 
     
 
