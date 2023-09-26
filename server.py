@@ -37,7 +37,7 @@ def clientThread(connectionSocket: socket, addr: str,
     while True:
         try:
             msg = connectionSocket.recv(1024).decode()
-            if msg.strip()[:3] == ":dm" and len(msg.split(" ")) == 3:
+            if msg.strip()[:3] == ":dm" and len(msg.split(" ")) >= 3:
                 #if a DM is recieved
                 dm = msg.split(" ")
                 destName = dm[1]
@@ -47,12 +47,14 @@ def clientThread(connectionSocket: socket, addr: str,
                 serverPrint(formattedDM, printLock)
                 clientDict[destAddr].send(formattedDM.encode())
                 clientDict[addr].send(formattedDM.encode())
-            else:
+            elif msg != '':
                 outMsg = f"{name}: {msg}"
                 serverPrint(outMsg, printLock)
                 #send message to all clients (including sender)
                 for client in clientDict:
                     clientDict[client].send(outMsg.encode())
+            else:
+                raise Exception()
         except:
             #handle exit
             connectionSocket.close()
@@ -60,7 +62,7 @@ def clientThread(connectionSocket: socket, addr: str,
             #remove name from set once client leaves
             nameSet.pop(name)
             #send message that user has left
-            leaveMsg = f"{name} has left the chatroom\n"
+            leaveMsg = f"{name} left the chatroom\n"
             serverPrint(leaveMsg, printLock)
             for client in clientDict:
                 clientDict[client].send(leaveMsg.encode())

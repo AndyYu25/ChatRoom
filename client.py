@@ -1,4 +1,5 @@
 import sys
+import os
 from socket import *
 import time
 import datetime
@@ -17,7 +18,10 @@ def serverThread(clientSocket: socket, closeEvent: threading.Event):
             inMessage = clientSocket.recv(1024).decode()
             serverPrint(inMessage)
         except:
-            return
+            if closeEvent:
+                return
+            else:
+                os._exit(1)
 
 def getDatetimeString():
     currentDatetime = datetime.datetime.now().replace(second = 0, microsecond=0)
@@ -86,6 +90,7 @@ def main():
     while True:
         cmdStr = input("")
         if cmdStr == ":Exit":
+            closeEvent.set()
             clientSocket.shutdown(SHUT_RDWR)
             clientSocket.close()
             sys.exit(0)
