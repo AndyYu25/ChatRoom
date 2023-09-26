@@ -13,12 +13,11 @@ def serverThread(clientSocket: socket, closeEvent: threading.Event):
     """
     #thread closes when the main thread closes
     while True:
-        inMessage = clientSocket.recv(1024).decode()
-        if inMessage == ":Exit":
-            clientSocket.close()
-            closeEvent.set()
+        try:
+            inMessage = clientSocket.recv(1024).decode()
+            serverPrint(inMessage)
+        except:
             return
-        serverPrint(inMessage)
 
 def getDatetimeString():
     currentDatetime = datetime.datetime.now().replace(second = 0, microsecond=0)
@@ -75,7 +74,7 @@ def main():
     clientSocket = socket(AF_INET, SOCK_STREAM)
     clientSocket.connect((HOST, PORT))
     clientSocket.send(f"{password}\n".encode())
-    time.sleep(0.001)
+    #time.sleep(0.001)
     clientSocket.send(f"{name}\n".encode())
     welcomeMessage = clientSocket.recv(1024)
     serverPrint(welcomeMessage.decode())
@@ -87,10 +86,7 @@ def main():
     while True:
         cmdStr = input("")
         if cmdStr == ":Exit":
-            clientSocket.send((cmdStr).encode())
-            #wait for server response and for child thread to end
-            time.sleep(1)
-            closeEvent.set()
+            clientSocket.shutdown(SHUT_RDWR)
             clientSocket.close()
             sys.exit(0)
         elif cmdStr == ":)":
